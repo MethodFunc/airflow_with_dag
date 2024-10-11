@@ -4,9 +4,10 @@ from sqlalchemy.orm import sessionmaker
 
 from database.connection import mariadb_connection
 from database.schema import AwsStnInfo, AwsData, CloudData, TemperatureData, VisibleData
+from airflow.models.param import ParamsDict
 
 
-def insert_data(conn_id, group_id, task_id, stn, **kwargs):
+def insert_data(group_id, task_id, stn, **kwargs):
     schemas = {
         'aws': AwsData,
         'cloud': CloudData,
@@ -15,6 +16,9 @@ def insert_data(conn_id, group_id, task_id, stn, **kwargs):
     }
 
     try:
+        p: ParamsDict = kwargs["params"]
+        conn_id = p["conn_id"]
+
         engine = mariadb_connection(conn_id)
         session_ = sessionmaker(bind=engine)
         session = session_()
@@ -57,7 +61,9 @@ def insert_data(conn_id, group_id, task_id, stn, **kwargs):
         raise IOError(f'삽입 실패! : {e}')
 
 
-def checking_stn_id(conn_id, stn, **kwargs):
+def checking_stn_id(stn, **kwargs):
+    p: ParamsDict = kwargs["params"]
+    conn_id = p["conn_id"]
     try:
         engine = mariadb_connection(conn_id)
         session_ = sessionmaker(bind=engine)

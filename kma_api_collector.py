@@ -17,12 +17,11 @@ from airflow.utils.trigger_rule import TriggerRule
 from aws_bins import kma_api_data
 from aws_bins.CRUD import checking_stn_id, insert_data
 from database.connection import mariadb_connection
+from airflow.models.param import ParamsDict
 
 log = logging.getLogger(__name__)
 
-# 지점번호 및 conn_id는 수동으로 설정해줘야함
 target_stn = [712, 174]
-conn_id = 'maria_database'
 
 
 def preprocessing(group_id, task_id, stn, **kwargs):
@@ -42,13 +41,15 @@ def preprocessing(group_id, task_id, stn, **kwargs):
     kwargs['ti'].xcom_push(key=f"{stn}_data", value=dataframe)
 
 
-def create_tables(conn_id):
+def create_tables(**kwargs):
     """
     아직 작동 안됨. 고칠 예정
     :param conn_id:
     :return:
     """
     from sqlalchemy.orm import declarative_base
+    p: ParamsDict = kwargs["params"]
+    conn_id = p["conn_id"]
 
     engine = mariadb_connection(conn_id)
     base = declarative_base()
@@ -59,14 +60,25 @@ with DAG(
         dag_id=Path(__file__).stem,
         dag_display_name="AWS API 수집기",
         schedule=None,
+        # 스케줄러 설정 시 파라미터의 default를 지정해줘야함
+        # schedule="@hourly",
         start_date=datetime(2024, 9, 20),
         catchup=False,
         tags=["AWS", "기상청", "지역별상세관측자료", "방재기상관측"],
         params={
             "serviceKey": Param(
+                # 스케줄러 시 api 키 적기
+                # default="your_api_key",
                 type="string",
                 title="api key",
                 description="API키를 입력해주세요. 발급은 https://apihub.kma.go.kr/ 회원가입 후 가능합니다.",
+            ),
+            "conn_id": Param(
+                # 스케줄러 시 데이터베이스 명 적기
+                # default='maria_database',
+                type="string",
+                title="conn_id",
+                description="airflow에 등록한 마리아 데이터베이스의 conn_id를 입력해주세요.",
             ),
         },
         default_args={
@@ -92,7 +104,6 @@ with DAG(
         task_id='crt_table',
         task_display_name='테이블 생성',
         python_callable=create_tables,
-        op_args=[conn_id]
     )
 
     start >> crt_table >> end
@@ -103,7 +114,7 @@ with DAG(
             task_id=f'check_stns_{stn}',
             task_display_name=f'{stn}_지점 번호 확인',
             python_callable=checking_stn_id,
-            op_kwargs={'conn_id': conn_id, 'stn': stn},
+            op_kwargs={'stn': stn},
             trigger_rule=TriggerRule.ALL_SUCCESS,
             task_group=stn_check_group
         )
@@ -185,7 +196,7 @@ with DAG(
             python_callable=insert_data,
             provide_context=True,
             op_kwargs={
-                'conn_id': conn_id,
+
                 'group_id': 'Preprocessing_group',
                 'task_id': f"aws_pre_{stn}",
                 'stn': stn
@@ -199,7 +210,7 @@ with DAG(
             python_callable=insert_data,
             provide_context=True,
             op_kwargs={
-                'conn_id': conn_id,
+
                 'group_id': 'cloud_group',
                 'task_id': f"aws_cloud_{stn}",
                 'stn': stn
@@ -213,7 +224,7 @@ with DAG(
             python_callable=insert_data,
             provide_context=True,
             op_kwargs={
-                'conn_id': conn_id,
+
                 'group_id': 'Preprocessing_group',
                 'task_id': f"visible_pre_{stn}",
                 'stn': stn
@@ -228,7 +239,7 @@ with DAG(
             python_callable=insert_data,
             provide_context=True,
             op_kwargs={
-                'conn_id': conn_id,
+
                 'group_id': 'Preprocessing_group',
                 'task_id': f"temperature_pre_{stn}",
                 'stn': stn
