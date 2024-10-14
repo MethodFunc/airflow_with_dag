@@ -26,6 +26,7 @@ class AwsStnInfo(BASE):
     temperature_data = relationship('TemperatureData', back_populates='stn_info', cascade='all, delete')
     visible_data = relationship('VisibleData', back_populates='stn_info', cascade='all, delete')
     cloud_data = relationship('CloudData', back_populates='stn_info', cascade='all, delete')
+    ww_data = relationship('WwData', back_populates='stn_info', cascade='all, delete')
 
 
 class AwsData(BASE):
@@ -107,3 +108,19 @@ class VisibleData(BASE):
     WW15 = Column(Integer)
 
     stn_info = relationship('AwsStnInfo', back_populates='visible_data')
+
+
+class WwData(BASE):
+    __tablename__ = 'AWS_WW_DATA'
+    ID = Column(Integer, primary_key=True)
+    CR_YMD = Column(DateTime)
+    STN_ID = Column(Integer, ForeignKey('AWS_STN_INFO.STN_ID', ondelete="CASCADE"))
+    LON = Column(Float(12, 9))
+    LAT = Column(Float(10, 8))
+    S = Column(Integer)
+    N = Column(Integer)
+    WW1 = Column(Integer)
+    NN1 = Column(Integer)
+
+    stn_info = relationship('AwsStnInfo', back_populates='ww_data')
+

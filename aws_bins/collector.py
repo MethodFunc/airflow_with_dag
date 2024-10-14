@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 
+import time
 import pandas as pd
 import requests
 from airflow.models.param import ParamsDict
+from requests.exceptions import RequestException
 
 
 def common_parma(stn, kwargs):
@@ -45,6 +47,8 @@ def create_dataframe(data, columns):
 
 
 def kma_api_data(stn, kind: str = 'aws', **kwargs):
+    max_retries = 3
+    delay = 5
     column_dict = {
         'aws': ['CR_YMD', 'STN_ID', 'WD1', 'WS1', 'WDS', 'WSS', 'WD10', 'WS10', 'TA', 'RE', 'RN_15m', 'RN_60m',
                 'RN_12H', 'RN_DAY', 'HM', 'PA', 'PS', 'TD'],
@@ -52,22 +56,35 @@ def kma_api_data(stn, kind: str = 'aws', **kwargs):
         'temperature': ['CR_YMD', 'STN_ID', 'TA', 'HM', 'TD', 'TG', 'TS', 'TE005', 'TE01', 'TE02', 'TE03', 'TE05',
                         'TE10',
                         'TE15', 'TE30', 'TE50', 'PA', 'PS'],
-        'visible': ['CR_YMD', 'STN_ID', 'LON', 'LAT', 'S', 'VIS1', 'VIS10', 'WW1', 'WW15']
+        'visible': ['CR_YMD', 'STN_ID', 'LON', 'LAT', 'S', 'VIS1', 'VIS10', 'WW1', 'WW15'],
+        'ww': ['CR_YMD', 'STN_ID', 'LON', 'LAT', 'S', 'N', 'WW1', 'NN1'],
     }
     api_urls = {
         'aws': 'https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min?',
         'cloud': 'https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min_cloud?',
         'temperature': 'https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min_lst?',
-        'visible': 'https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min_vis?'
+        'visible': 'https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min_vis?',
+        'ww': 'https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min_ww1?'
 
     }
 
     params = common_parma(stn, kwargs)
 
-    url = api_urls.get(kind, None)
-    columns = column_dict.get(kind, None)
-    if url is None:
-        raise ValueError('choose aws, cloud, temperature')
+    if kind == 'ww':
+        params.update({'itv': 1, 'range': 1})
+        print(params)
+
+    for attempt in range(max_retries):
+        try:
+            url = api_urls.get(kind, None)
+            columns = column_dict.get(kind, None)
+            if url is None:
+                raise ValueError('choose aws, cloud, temperature')
+        except RequestException as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
+            time.sleep(delay)
 
     content_data = response_data(url, params)
     df = create_dataframe(content_data, columns)

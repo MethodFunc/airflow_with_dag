@@ -3,18 +3,52 @@ from sqlalchemy import and_
 from sqlalchemy.orm import sessionmaker
 
 from database.connection import mariadb_connection
-from database.schema import AwsStnInfo, AwsData, CloudData, TemperatureData, VisibleData
+
+from database.schema import AwsStnInfo, AwsData, CloudData, TemperatureData, VisibleData, WwData
 from airflow.models.param import ParamsDict
+from sqlalchemy.exc import SQLAlchemyError
+
+schemas = {
+    'aws': AwsData,
+    'cloud': CloudData,
+    'visible': VisibleData,
+    'temperature': TemperatureData,
+    'ww': WwData
+}
 
 
-def insert_data(group_id, task_id, stn, **kwargs):
-    schemas = {
-        'aws': AwsData,
-        'cloud': CloudData,
-        'visible': VisibleData,
-        'temperature': TemperatureData
-    }
+def create_tables(kind='aws', **kwargs):
+    """
+    아직 작동 안됨. 고칠 예정
+    :param kind:
+    :param conn_id:
+    :return:
+    """
+    try:
+        p: ParamsDict = kwargs["params"]
+        conn_id = p["conn_id"]
 
+        schema = schemas.get(kind, None)
+
+        if schema is None:
+            raise ValueError(f'kind is aws, visible, cloud, temperature, ww')
+
+        engine = mariadb_connection(conn_id)
+        try:
+            schema.metadata.create_all(bind=engine)
+            print("Tables created successfully")
+        finally:
+            engine.dispose()
+
+    except SQLAlchemyError as e:
+        print(f"An error occurred: {e}")
+    except KeyError as e:
+        print(f"Missing parameter: {e}")
+    except ImportError as e:
+        print(f"Error importing models: {e}")
+
+
+def insert_data(kind, group_id, task_id, stn, **kwargs):
     try:
         p: ParamsDict = kwargs["params"]
         conn_id = p["conn_id"]
@@ -23,16 +57,14 @@ def insert_data(group_id, task_id, stn, **kwargs):
         session_ = sessionmaker(bind=engine)
         session = session_()
 
-        if group_id == 'Preprocessing_group':
-            task_id_temp = task_id.split('_')[0]
-            schema = schemas.get(task_id_temp, None)
-        elif group_id == 'cloud_group':
-            schema = CloudData
+        schema = schemas.get(kind, None)
 
         if schema is None:
-            raise ValueError('group_id is not correct')
+            raise ValueError('kind is not correct')
 
+        # data = kwargs['ti'].xcom_pull(task_ids=f'{task_id}', key=f'{stn}_data')
         data = kwargs['ti'].xcom_pull(task_ids=f'{group_id}.{task_id}', key=f'{stn}_data')
+
         print(f"Pulled data: {data}")  # Debugging line to check pulled data
 
         if data is None:

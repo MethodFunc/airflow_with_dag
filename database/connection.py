@@ -16,3 +16,4 @@ def mariadb_connection(conn_id: str):
     engine = create_engine(engine_string)
 
     return engine
+
