@@ -1,5 +1,5 @@
 import numpy as np
-from sqlalchemy import and_
+from sqlalchemy import and_, inspect
 from sqlalchemy.orm import sessionmaker
 
 from database.connection import mariadb_connection
@@ -9,6 +9,16 @@ from airflow.models.param import ParamsDict
 from sqlalchemy.exc import SQLAlchemyError
 
 schemas = {
+    'info': AwsStnInfo,
+    'aws': AwsData,
+    'cloud': CloudData,
+    'visible': VisibleData,
+    'temperature': TemperatureData,
+    'ww': WwData
+}
+
+table_name = {
+    'info': AwsStnInfo,
     'aws': AwsData,
     'cloud': CloudData,
     'visible': VisibleData,
@@ -17,29 +27,34 @@ schemas = {
 }
 
 
-def create_tables(kind='aws', **kwargs):
+def check_and_create_table(kind='aws', **kwargs):
     """
     아직 작동 안됨. 고칠 예정
     :param kind:
     :param conn_id:
     :return:
     """
+
+    p: ParamsDict = kwargs["params"]
+    conn_id = p["conn_id"]
     try:
-        p: ParamsDict = kwargs["params"]
-        conn_id = p["conn_id"]
-
+        engine = mariadb_connection(conn_id)
         schema = schemas.get(kind, None)
-
         if schema is None:
             raise ValueError(f'kind is aws, visible, cloud, temperature, ww')
 
-        engine = mariadb_connection(conn_id)
-        try:
-            schema.metadata.create_all(bind=engine)
-            print("Tables created successfully")
-        finally:
-            engine.dispose()
-
+        inspector = inspect(engine)
+        check_table = inspector.has_table(schema.__tablename__)
+        if check_table:
+            kwargs['ti'].xcom_push(key=f"check_table", value=True)
+            print('Table is exists')
+        else:
+            kwargs['ti'].xcom_push(key=f"check_table", value=False)
+            try:
+                schema.metadata.create_all(bind=engine)
+                print("Tables created successfully")
+            finally:
+                engine.dispose()
     except SQLAlchemyError as e:
         print(f"An error occurred: {e}")
     except KeyError as e:
