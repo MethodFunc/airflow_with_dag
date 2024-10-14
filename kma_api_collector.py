@@ -9,9 +9,9 @@ from airflow.models.param import Param
 from functools import partial
 
 from task_util import create_data_collection_group
-from aws_bins import common_task
+from aws_bins import common_task, stn_info_data
 from airflow.models.baseoperator import cross_downstream
-from database import checking_stn_id
+from database import checking_stn_id, check_and_create_table
 from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 
@@ -47,6 +47,24 @@ with DAG(
         }
 ) as dag:
     start, end = common_task()
+    with TaskGroup(group_id=f'stn_info_group', tooltip=f'지점 번호 삽입') as stn_info_group:
+        table_exists_create = PythonOperator(
+            task_id='table_exists_create',
+            python_callable=check_and_create_table,
+            provide_context=True,
+
+            op_kwargs={
+                'kind': 'info'
+            }
+        )
+
+        stn_info = PythonOperator(
+            task_id='stn_data_insert',
+            python_callable=stn_info_data,
+            op_kwargs={'task_id': 'stn_info_group.table_exists_create'}
+        )
+
+        table_exists_create >> stn_info
 
     with TaskGroup(group_id=f'check_group', tooltip=f'지점 번호 확인') as check_group:
         for stn in target_stn:
@@ -64,7 +82,8 @@ with DAG(
     temperature_group = collector('temperature')(dag)
     ww_group = collector('ww')(dag)
 
-    start >> check_group
+    start >> stn_info_group >> check_group
     cross_downstream(check_group, [aws_group, cloud_group])
     cross_downstream([aws_group, cloud_group], [visible_group, temperature_group])
     [visible_group, temperature_group] >> ww_group >> end
+

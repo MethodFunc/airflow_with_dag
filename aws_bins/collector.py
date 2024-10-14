@@ -78,15 +78,17 @@ def kma_api_data(stn, kind: str = 'aws', **kwargs):
         try:
             url = api_urls.get(kind, None)
             columns = column_dict.get(kind, None)
+
             if url is None:
                 raise ValueError('choose aws, cloud, temperature')
+
+            content_data = response_data(url, params)
         except RequestException as e:
             if attempt == max_retries - 1:
                 raise
             print(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
             time.sleep(delay)
 
-    content_data = response_data(url, params)
     df = create_dataframe(content_data, columns)
 
     print(df)
