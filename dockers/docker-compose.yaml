@@ -61,9 +61,9 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: mysql+pymysql://user:pwd@host:port/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+mysql://user:pwd@host:port/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    # openssl rand -hex 32 로 설정
+    # readme 참고
     AIRFLOW__CORE__FERNET_KEY: 'KyWfKxe6W9xxq22wcSCayvfBojHWJ_lZR22iUG1yQ2g='
-    # worker의 로그를 보기 위해 설정해야함. openssl rand -hex 32
+    # readme 참고
     AIRFLOW__WEBSERVER__SECRET_KEY: 'Ob5nmIxJNBHU08hrwdm8ic4uHNuqbG0kxfNvrJpA4e8='
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'

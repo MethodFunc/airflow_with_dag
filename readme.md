@@ -6,6 +6,34 @@
 3. https://apihub.kma.go.kr/ 해당 사이트를 가입 후 api를 발급 받아야합니다.
 
 
+## Docker-compose 수정
+1. AIRFLOW__CORE__FERNET_KEY 및 AIRFLOW__WEBSERVER__SECRET_KEY 키 값
+```python
+from cryptography.fernet import Fernet
+fernet_key = Fernet.generate_key()
+print(fernet_key.decode())
+```
+2. AIRFLOW__DATABASE__SQL_ALCHEMY_CONN 설정
+```text
+postgresql
+postgresql+psycopg2://airflow:airflow@postgres/airflow
+
+mariadb
+mysql+pymysql://user:pwd@host:port/airflow
+```
+
+3. AIRFLOW__CELERY__RESULT_BACKEND 설정
+```text
+postgresql
+db+postgresql://airflow:airflow@postgres/airflow
+
+mariadb
+db+mysql://user:pwd@host:port/airflow
+
+config/airflow.cfg 의 다음 항목도 같이 수정
+result_backend = ...
+```
+
 ##  트리거 화면
 ### 구버전
 ![img_1.png](img_1.png)
