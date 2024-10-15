@@ -4,45 +4,39 @@ from sqlalchemy.orm import sessionmaker
 
 from database.connection import mariadb_connection
 
-from database.schema import AwsStnInfo, AwsData, CloudData, TemperatureData, VisibleData, WwData
+from database.schema import AwsStnInfo, AwsData, CloudData, TemperatureData, VisibleData, WwData, AsosStnInfo, AsosData
 from airflow.models.param import ParamsDict
 from sqlalchemy.exc import SQLAlchemyError
 
 schemas = {
-    'info': AwsStnInfo,
+    'aws_info': AwsStnInfo,
     'aws': AwsData,
     'cloud': CloudData,
     'visible': VisibleData,
     'temperature': TemperatureData,
-    'ww': WwData
-}
-
-table_name = {
-    'info': AwsStnInfo,
-    'aws': AwsData,
-    'cloud': CloudData,
-    'visible': VisibleData,
-    'temperature': TemperatureData,
-    'ww': WwData
+    'ww': WwData,
+    'asos_info': AsosStnInfo,
+    'asos': AsosData
 }
 
 
 def check_and_create_table(kind='aws', **kwargs):
     """
-    아직 작동 안됨. 고칠 예정
+    아직 작동 됨
     :param kind:
     :param conn_id:
     :return:
     """
+    assert kind in ['aws', 'asos', 'cloud', 'visible', 'ww', 'temperature', 'aws_info', 'asos_info']
 
     p: ParamsDict = kwargs["params"]
     conn_id = p["conn_id"]
+    schema = schemas.get(kind, None)
+    if schema is None:
+        raise ValueError('kind is not correct')
+
     try:
         engine = mariadb_connection(conn_id)
-        schema = schemas.get(kind, None)
-        if schema is None:
-            raise ValueError(f'kind is aws, visible, cloud, temperature, ww')
-
         inspector = inspect(engine)
         check_table = inspector.has_table(schema.__tablename__)
         if check_table:
@@ -51,8 +45,8 @@ def check_and_create_table(kind='aws', **kwargs):
         else:
             kwargs['ti'].xcom_push(key=f"check_table", value=False)
             try:
-                schema.metadata.create_all(bind=engine)
-                print("Tables created successfully")
+                schema.__table__.create(bind=engine, checkfirst=True)
+                print(f"Table {schema.__tablename__} created successfully")
             finally:
                 engine.dispose()
     except SQLAlchemyError as e:
@@ -64,6 +58,11 @@ def check_and_create_table(kind='aws', **kwargs):
 
 
 def insert_data(kind, group_id, task_id, stn, **kwargs):
+    assert kind in ['aws', 'asos', 'cloud', 'visible', 'ww', 'temperature']
+    schema = schemas.get(kind, None)
+    if schema is None:
+        raise ValueError('kind is not correct')
+
     try:
         p: ParamsDict = kwargs["params"]
         conn_id = p["conn_id"]
@@ -71,11 +70,6 @@ def insert_data(kind, group_id, task_id, stn, **kwargs):
         engine = mariadb_connection(conn_id)
         session_ = sessionmaker(bind=engine)
         session = session_()
-
-        schema = schemas.get(kind, None)
-
-        if schema is None:
-            raise ValueError('kind is not correct')
 
         # data = kwargs['ti'].xcom_pull(task_ids=f'{task_id}', key=f'{stn}_data')
         data = kwargs['ti'].xcom_pull(task_ids=f'{group_id}.{task_id}', key=f'{stn}_data')
@@ -108,15 +102,19 @@ def insert_data(kind, group_id, task_id, stn, **kwargs):
         raise IOError(f'삽입 실패! : {e}')
 
 
-def checking_stn_id(stn, **kwargs):
+def checking_stn_id(kind, stn, **kwargs):
+    assert kind in ['aws_info', 'asos_info']
     p: ParamsDict = kwargs["params"]
     conn_id = p["conn_id"]
+    schema = schemas.get(kind, None)
+    if schema is None:
+        raise ValueError(f'kind is only aws_info, asos_info')
     try:
         engine = mariadb_connection(conn_id)
         session_ = sessionmaker(bind=engine)
         session = session_()
 
-        result = session.query(AwsStnInfo).filter(AwsStnInfo.STN_ID == stn).all()
+        result = session.query(schema).filter(schema.STN_ID == stn).all()
         if result:
             for row in result:
                 print(f'STN_ID: {row.STN_ID}, STN_KO: {row.STN_KO}')

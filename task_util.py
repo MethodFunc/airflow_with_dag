@@ -1,8 +1,7 @@
 from airflow.utils.task_group import TaskGroup
 from airflow.operators.python import PythonOperator
-from aws_bins import kma_api_data, preprocessing
-from database import insert_data
-from database.CRUD import create_tables
+from aws_bins import kma_api_data, preprocessing, stn_info_data
+from database import insert_data, check_and_create_table, checking_stn_id
 
 
 def get_create_table_operator(kind='aws', task_id='crt_table', **kwargs):
@@ -11,11 +10,56 @@ def get_create_table_operator(kind='aws', task_id='crt_table', **kwargs):
     """
     return PythonOperator(
         task_id=f'{kind}_{task_id}',
-        python_callable=create_tables,
+        python_callable=check_and_create_table,
         op_kwargs={'kind': kind},
         provide_context=True,
         **kwargs
     )
+
+
+def create_info_check_group(kind, target_stn):
+    def create_stn_information_group(dag):
+        with TaskGroup(group_id=f'{kind}_group', tooltip=f'지점 번호 삽입') as group:
+            table_exists_create = PythonOperator(
+                task_id='table_exists_create',
+                python_callable=check_and_create_table,
+                provide_context=True,
+
+                op_kwargs={
+                    'kind': kind
+                }
+            )
+
+            stn_info = PythonOperator(
+                task_id='stn_data_insert',
+                python_callable=stn_info_data,
+                op_kwargs={
+                    'kind': kind,
+                    'task_id': f'{kind}_group.table_exists_create'}
+            )
+
+            table_exists_create >> stn_info
+
+        return group
+
+    def check_stn_info_group(dag):
+        with TaskGroup(group_id=f'check_group', tooltip=f'지점 번호 확인') as group:
+            for stn in target_stn:
+                stn = str(stn)
+                check_stn = PythonOperator(
+                    task_id=f'check_stns_{stn}',
+                    python_callable=checking_stn_id,
+                    op_kwargs={'kind': kind, 'stn': stn},
+                )
+
+                check_stn
+
+        return group
+
+    if target_stn is None:
+        return create_stn_information_group
+    else:
+        return check_stn_info_group
 
 
 def create_data_collection_group(kind, target_stn):

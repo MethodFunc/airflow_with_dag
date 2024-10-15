@@ -1,4 +1,4 @@
-# Airflow kma 기상청 api aws 수집
+# Airflow kma 기상청 api aws/asos 수집
 
 ## Description.
 1. stn_check 부분은 선행으로 먼저 데이터베이스에 넣어주셔야합니다.
@@ -33,6 +33,13 @@ db+mysql://user:pwd@host:port/airflow
 config/airflow.cfg 의 다음 항목도 같이 수정
 result_backend = ...
 ```
+
+## 변경점
+1. 데이터베이스가 한번에 생성되는 문제 해결
+2. ASOS (종관기상관측) 스키마 추가
+3. ASOS 관련 코드 업데이트
+4. API의 전처리 코드 개선
+5. 중복 테스크 task_util로 통합
 
 ##  트리거 화면
 ### 구버전

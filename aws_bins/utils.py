@@ -15,8 +15,11 @@ def preprocessing(group_id, task_id, stn, **kwargs):
     # dataframe = kwargs['ti'].xcom_pull(task_ids=f'{task_id}_{stn}', key=f'{stn}_data')
     print(f"Debug: {dataframe}")
     for col in dataframe.columns[2:]:
-        dataframe[col] = dataframe[col].astype(float)
-        dataframe[col] = dataframe[col].apply(lambda x: math.nan if x <= -50 else x)
+        try:
+            dataframe[col] = dataframe[col].astype(float)
+            dataframe[col] = dataframe[col].apply(lambda x: math.nan if x <= -50 else x)
+        except ValueError:
+            print(f'{col} is {type(col)}')
 
     kwargs['ti'].xcom_push(key=f"{stn}_data", value=dataframe)
 
@@ -26,3 +29,4 @@ def common_task():
     end = EmptyOperator(task_id='end', trigger_rule=TriggerRule.NONE_FAILED, task_display_name="종료")
 
     return start, end
+

@@ -6,23 +6,22 @@ from pathlib import Path
 
 from airflow.models.dag import DAG
 from airflow.models.param import Param
-from functools import partial
 
 from task_util import create_data_collection_group, create_info_check_group
 from aws_bins import common_task
-from airflow.models.baseoperator import cross_downstream
+
 
 log = logging.getLogger(__name__)
 
-target_stn = [712, 174]
+target_stn = [184, 185]
 
 with DAG(
         dag_id=Path(__file__).stem,
-        dag_display_name="AWS API 수집기",
+        dag_display_name="ASOS API 수집기",
         schedule="3 * * * *",
         start_date=datetime(2024, 9, 20),
         catchup=False,
-        tags=["AWS", "기상청", "지역별상세관측자료", "방재기상관측"],
+        tags=["ASOS", "기상청", "종관기상관측"],
         params={
             "serviceKey": Param(
                 # 스케줄러 시 api 키 적기
@@ -44,18 +43,10 @@ with DAG(
         }
 ) as dag:
     start, end = common_task()
-    start, end = common_task()
-    stn_info_group = create_info_check_group('aws_info', None)(dag)
-    check_stn_group = create_info_check_group('aws_info', target_stn)(dag)
+    stn_info_group = create_info_check_group('asos_info', None)(dag)
+    check_stn_group = create_info_check_group('asos_info', target_stn)(dag)
 
-    collector = partial(create_data_collection_group, target_stn=target_stn)
-    aws_group = collector('aws')(dag)
-    cloud_group = collector('cloud')(dag)
-    visible_group = collector('visible')(dag)
-    temperature_group = collector('temperature')(dag)
-    ww_group = collector('ww')(dag)
+    asos_group = create_data_collection_group('asos', target_stn=target_stn)(dag)
 
-    start >> stn_info_group >> check_stn_group
-    cross_downstream(check_stn_group, [aws_group, cloud_group])
-    cross_downstream([aws_group, cloud_group], [visible_group, temperature_group])
-    [visible_group, temperature_group] >> ww_group >> end
+    start >> stn_info_group >> check_stn_group >> asos_group >> end
+
