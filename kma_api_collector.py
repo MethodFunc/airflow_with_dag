@@ -22,6 +22,8 @@ with DAG(
         schedule="3 * * * *",
         start_date=datetime(2024, 9, 20),
         catchup=False,
+        max_active_runs=1,
+        concurrency=1,
         tags=["AWS", "기상청", "지역별상세관측자료", "방재기상관측"],
         params={
             "serviceKey": Param(

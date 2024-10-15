@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import time
 import pandas as pd
@@ -8,8 +8,15 @@ from requests.exceptions import RequestException
 
 
 def common_parma(stn, kwargs):
+    DATEFORMAT = '%Y%m%d%H00'
     p: ParamsDict = kwargs["params"]
     auth_key = p["serviceKey"]
+
+    exec_time_kst = kwargs['execution_date'] + timedelta(hours=9)
+
+    tm1_time = (exec_time_kst - timedelta(hours=1)).strftime(DATEFORMAT)
+    tm2_time = exec_time_kst.strftime(DATEFORMAT)
+
 
     # 1. disp: 1 기준
     params = {
@@ -17,8 +24,8 @@ def common_parma(stn, kwargs):
         'stn': stn,
         'help': 0,
         'disp': 1,
-        'tm1': (datetime.now() - timedelta(hours=1)).strftime("%Y%m%d%H00"),
-        'tm2': datetime.now().strftime("%Y%m%d%H00")
+        'tm1': tm1_time,
+        'tm2': tm2_time
     }
 
     return params
@@ -81,6 +88,7 @@ def kma_api_data(stn, kind: str = 'aws', **kwargs):
     }
 
     params = common_parma(stn, kwargs)
+    print(params)
 
     if kind == 'ww':
         params.update({'itv': 1, 'range': 1})

@@ -21,6 +21,8 @@ with DAG(
         schedule="3 * * * *",
         start_date=datetime(2024, 9, 20),
         catchup=False,
+        max_active_runs=1,
+        concurrency=1,
         tags=["ASOS", "기상청", "종관기상관측"],
         params={
             "serviceKey": Param(

@@ -40,7 +40,8 @@ result_backend = ...
 3. ASOS 관련 코드 업데이트
 4. API의 전처리 코드 개선
 5. 중복 테스크 task_util로 통합
-
+6. catchup을 위한 시간 데이터를 task 시작 시간으로 지정 (airflow kwargs 이용)
+7. 한번에 여러개의 실행을 막기 위해 catchup의 max_active_run과 concurrency 추가
 ##  트리거 화면
 ### 구버전
 ![img_1.png](img_1.png)
