@@ -54,20 +54,24 @@ x-airflow-common:
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    # Postgresql사용 시 해제해주세요
+#    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+#    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+#   마리아데이터베이스 설정
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: mysql+pymysql://user:pwd@host:port/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+mysql://user:pwd@host:port/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     # openssl rand -hex 32 로 설정
-    AIRFLOW__CORE__FERNET_KEY: 'f26be3d086985d397410bca1dfe647a1f4155729d1bbd014fb27c8df4de32b04'
+    AIRFLOW__CORE__FERNET_KEY: 'KyWfKxe6W9xxq22wcSCayvfBojHWJ_lZR22iUG1yQ2g='
     # worker의 로그를 보기 위해 설정해야함. openssl rand -hex 32
-    AIRFLOW__WEBSERVER__SECRET_KEY: 'ba1e7faf7861193f0da191e40425d956f26a62333f0ab91061c0c174902977a5'
+    AIRFLOW__WEBSERVER__SECRET_KEY: 'Ob5nmIxJNBHU08hrwdm8ic4uHNuqbG0kxfNvrJpA4e8='
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     # worker
     AIRFLOW__CORE__STORE_DAG_CODE: 'True'
     AIRFLOW__CORE__STORE_SERIALIZED_DAGS: 'True'
-    
+
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -93,26 +97,26 @@ x-airflow-common:
     &airflow-common-depends-on
     redis:
       condition: service_healthy
-    postgres:
-      condition: service_healthy
+#    postgres:
+#      condition: service_healthy
 
 services:
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    ports:
-      - 5432:5432
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
-      interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
+#  postgres:
+#    image: postgres:13
+#    environment:
+#      POSTGRES_USER: airflow
+#      POSTGRES_PASSWORD: airflow
+#      POSTGRES_DB: airflow
+#    ports:
+#      - 5432:5432
+#    volumes:
+#      - postgres-db-volume:/var/lib/postgresql/data
+#    healthcheck:
+#      test: ["CMD", "pg_isready", "-U", "airflow"]
+#      interval: 10s
+#      retries: 5
+#      start_period: 5s
+#    restart: always
 
   redis:
     # Redis is limited to 7.2-bookworm due to licencing change
@@ -189,7 +193,7 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-        
+
   airflow-worker-2:
     <<: *airflow-common
     command: celery worker
@@ -219,7 +223,6 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-        
 
   airflow-triggerer:
     <<: *airflow-common
@@ -335,5 +338,5 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-volumes:
-  postgres-db-volume:
+#volumes:
+#  postgres-db-volume:

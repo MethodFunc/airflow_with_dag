@@ -15,4 +15,6 @@ RUN pip install --no-cache-dir "apache-airflow-providers-mysql" --constraint "ht
 RUN pip install --no-cache-dir "apache-airflow-providers-mongo" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-3.11.txt"
 RUN pip install --no-cache-dir "pymongo" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-3.11.txt"
 RUN pip install --no-cache-dir "pymysql" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-3.11.txt"
+RUN pip install --no-cache-dir "pymysql" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-3.11.txt"
+RUN pip install --no-cache-dir "mysql-connector-python" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-3.11.txt"
 RUN pip install mlflow
