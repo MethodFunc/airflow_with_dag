@@ -1,6 +1,6 @@
 import numpy as np
 from sqlalchemy import and_, inspect
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from database.connection import mariadb_connection
 
@@ -68,7 +68,9 @@ def insert_data(kind, group_id, task_id, stn, **kwargs):
         conn_id = p["conn_id"]
 
         engine = mariadb_connection(conn_id)
-        session_ = sessionmaker(bind=engine)
+        session_ = scoped_session(sessionmaker(bind=engine,
+                                               autocommit=False,
+                                               autoflush=False))
         session = session_()
 
         # data = kwargs['ti'].xcom_pull(task_ids=f'{task_id}', key=f'{stn}_data')

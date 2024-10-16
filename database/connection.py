@@ -13,7 +13,10 @@ def mariadb_connection(conn_id: str):
 
     engine_string = f"mysql+pymysql://{user}:{password}@{host}:{port}/{db}"
 
-    engine = create_engine(engine_string)
+    engine = create_engine(engine_string,
+                           pool_size=5,
+                           max_overflow=10,
+                           pool_recycle=3600)
 
     return engine
 
