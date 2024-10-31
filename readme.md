@@ -43,6 +43,7 @@ result_backend = ...
 6. catchup을 위한 시간 데이터를 task 시작 시간으로 지정 (airflow kwargs 이용)
 7. 한번에 여러개의 실행을 막기 위해 catchup의 max_active_run과 concurrency 추가
 8. 데드락을 처리하기 위한 sqlalchemy 설정 추가
+9. insert ignore(중복 데이터 제외)를 하기 위한 스키마 수정 및 INSERT 수정
 
 ##  트리거 화면
 ### 구버전
@@ -89,6 +90,7 @@ airflow에서 지원하는 도커파일은 기본적으로 celery execute지만 
 
 **현재 dag는 현재시간을 기준으로 하며, catchup을 True로 하여도 지나간 데이터는 수집하지 않음**
 
+**다른 개발이 늦어지는 이유, 수집하는 데이터량 이 많아 제 컴퓨터로 다른 개발을 할 수 없는 상태입니다. (램용량 문제) <br>따라서 추후 어느정도 데이터 수집되면 개발을 이어 나갈 것입니다.**
 
 ## Flower
 ![img_2.png](img_2.png)

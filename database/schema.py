@@ -1,11 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, UniqueConstraint
 
 BASE = declarative_base()
 
 
-#################### 방재기상관측(AWS) 스키마 ####################
-# AWS 지점 정보 테이블
 class AwsStnInfo(BASE):
     __tablename__ = 'AWS_STN_INFO'
     STN_ID = Column(Integer, primary_key=True)
@@ -53,6 +51,9 @@ class AwsData(BASE):
     TD = Column(Float)
 
     stn_info = relationship('AwsStnInfo', back_populates='aws_data')
+    __table_args__ = (
+        UniqueConstraint('STN_ID', 'CR_YMD', name='uix_stn_cr_ymd'),
+    )
 
 
 class CloudData(BASE):
@@ -69,6 +70,9 @@ class CloudData(BASE):
     CA_TOT = Column(Float(5, 2))
 
     stn_info = relationship('AwsStnInfo', back_populates='cloud_data')
+    __table_args__ = (
+        UniqueConstraint('STN_ID', 'CR_YMD', name='uix_stn_cr_ymd'),
+    )
 
 
 class TemperatureData(BASE):
@@ -95,6 +99,9 @@ class TemperatureData(BASE):
     PS = Column(Float(5, 1))
 
     stn_info = relationship('AwsStnInfo', back_populates='temperature_data')
+    __table_args__ = (
+        UniqueConstraint('STN_ID', 'CR_YMD', name='uix_stn_cr_ymd'),
+    )
 
 
 class VisibleData(BASE):
@@ -112,6 +119,9 @@ class VisibleData(BASE):
     WW15 = Column(Integer)
 
     stn_info = relationship('AwsStnInfo', back_populates='visible_data')
+    __table_args__ = (
+        UniqueConstraint('STN_ID', 'CR_YMD', name='uix_stn_cr_ymd'),
+    )
 
 
 class WwData(BASE):
@@ -128,6 +138,9 @@ class WwData(BASE):
     NN1 = Column(Integer)
 
     stn_info = relationship('AwsStnInfo', back_populates='ww_data')
+    __table_args__ = (
+        UniqueConstraint('STN_ID', 'CR_YMD', name='uix_stn_cr_ymd'),
+    )
 
 
 #################### 종관기상관측(ASOS) 스키마 ####################
@@ -204,3 +217,6 @@ class AsosData(BASE):
     IX = Column(Integer)
 
     asos_stn_info = relationship('AsosStnInfo', back_populates='asos_data')
+    __table_args__ = (
+        UniqueConstraint('STN_ID', 'CR_YMD', name='uix_stn_cr_ymd'),
+    )

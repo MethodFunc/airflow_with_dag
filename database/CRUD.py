@@ -1,5 +1,8 @@
+from itertools import islice
+from typing import List, Any, Dict
+
 import numpy as np
-from sqlalchemy import and_, inspect
+from sqlalchemy import and_, inspect, select, or_, text, insert
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from database.connection import mariadb_connection
@@ -18,6 +21,24 @@ schemas = {
     'asos_info': AsosStnInfo,
     'asos': AsosData
 }
+
+
+def clean_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    insert ignore를 사용하기 위한 Dict to List
+    :param data:
+    :return:
+    """
+    cleaned_data = []
+    for item in data:
+        cleaned_item = {}
+        for key, value in item.items():
+            if isinstance(value, float) and np.isnan(value):
+                cleaned_item[key] = None
+            else:
+                cleaned_item[key] = value
+            cleaned_data.append(cleaned_item)
+    return cleaned_data
 
 
 def check_and_create_table(kind='aws', **kwargs):
@@ -68,10 +89,8 @@ def insert_data(kind, group_id, task_id, stn, **kwargs):
         conn_id = p["conn_id"]
 
         engine = mariadb_connection(conn_id)
-        session_ = scoped_session(sessionmaker(bind=engine,
-                                               autocommit=False,
-                                               autoflush=False))
-        session = session_()
+        session_ = sessionmaker(bind=engine,
+                                expire_on_commit=False)
 
         # data = kwargs['ti'].xcom_pull(task_ids=f'{task_id}', key=f'{stn}_data')
         data = kwargs['ti'].xcom_pull(task_ids=f'{group_id}.{task_id}', key=f'{stn}_data')
@@ -80,24 +99,27 @@ def insert_data(kind, group_id, task_id, stn, **kwargs):
 
         if data is None:
             raise ValueError('Data is not exists')
+
         data = data.to_dict("records")
+        data = clean_data(data)
 
-        for n, r in enumerate(data):
-            for key, value in data[n].items():
-                if isinstance(value, float) and np.isnan(value):
-                    data[n][key] = None
+        with session_() as session:
+            total_inserted = 0
+            try:
+                stmt = insert(schema).prefix_with('IGNORE')
+                result = session.execute(stmt, data)
+                session.commit()
 
-        for d in data:
-            duplicated_data = session.query(schema).filter(and_(schema.STN_ID == d['STN_ID'],
-                                                                schema.CR_YMD == d['CR_YMD'])).first()
-            if duplicated_data:
-                print(f'중복 데이터:{d["CR_YMD"]}')
-                continue
+                total_inserted += result.rowcount
 
-            session.add(schema(**d))
+            except Exception as e:
+                session.rollback()
+                print(
+                    f"Chunk 삽입 실패 - {conn_id} - {str(e)}"
+                )
 
-        session.commit()
-        session.close()
+        print(f"Successfully inserted {total_inserted} records to {conn_id}")
+
 
     except Exception as e:
         session.rollback()
